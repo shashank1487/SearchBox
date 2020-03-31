@@ -24,18 +24,15 @@ Search.prototype.initialize = async function() {
   let performSearchBounded = this.performSearch.bind(this);
   let deBouncedPerformSearch = debounce(performSearchBounded);
 
-  let removeMouseNavigationBounded = self.removeMouseNavigation.bind(self);
-  document.addEventListener("keyup", function(e) {
+  this.els.searchText.addEventListener("keyup", function(e) {
     switch (e.keyCode) {
-      case 37: //LEFT
+      //case 37: //LEFT
       case 38: //UP
         self.addKeyboardNavigation(CONSTANTS.DIRECTION.UP);
-        removeMouseNavigationBounded();
         break;
-      case 39: //RIGHT
+      //case 39: //RIGHT
       case 40: //BOTTOM
         self.addKeyboardNavigation(CONSTANTS.DIRECTION.DOWN);
-        removeMouseNavigationBounded();
         break;
       default:
         let {
@@ -125,12 +122,7 @@ Search.prototype.performSearch = function(filter) {
 };
 
 Search.prototype.addKeyboardNavigation = function(direction) {
-  let selectedSearchItem,
-    sibling,
-    firstSearchItem,
-    lastSearchItem,
-    hoveredSearchItem,
-    searchItemToBeSelected;
+  let selectedSearchItem, hoveredSearchItem, searchItemToBeSelected;
   if (this.searchResults && this.searchResults.length > 0) {
     selectedSearchItem = this.els.searchResults.querySelector(
       ".search-item.selected"
@@ -138,25 +130,19 @@ Search.prototype.addKeyboardNavigation = function(direction) {
     if (selectedSearchItem) {
       selectedSearchItem.classList.remove("selected");
 
-      sibling =
+      searchItemToBeSelected =
         direction === CONSTANTS.DIRECTION.DOWN
           ? selectedSearchItem.nextElementSibling
           : selectedSearchItem.previousElementSibling;
 
-      if (sibling) {
-        sibling.classList.add("selected");
-      }
-      // Selected search item is last child when direction is down or first child when direction is up
-      else {
+      if (!searchItemToBeSelected) {
         if (direction === CONSTANTS.DIRECTION.DOWN) {
           searchItemToBeSelected = this.els.searchResults.firstElementChild;
-          //searchItemToBeSelected.classList.add("selected");
         } else {
           searchItemToBeSelected = this.els.searchResults.lastElementChild;
-          //searchItemToBeSelected.classList.add("selected");
         }
-        searchItemToBeSelected.classList.add("selected");
       }
+      searchItemToBeSelected.classList.add("selected");
     } else {
       hoveredSearchItem = this.els.searchResults.querySelector(
         ".search-item.hovered"
@@ -179,6 +165,7 @@ Search.prototype.addKeyboardNavigation = function(direction) {
             : this.els.searchResults.lastElementChild;
       }
       searchItemToBeSelected.classList.add("selected");
+      hoveredSearchItem.classList.remove("hovered");
     }
   }
 };
@@ -189,15 +176,6 @@ Search.prototype.removeKeyboardNavigation = function(e) {
   );
   if (selectedSearchItem) {
     selectedSearchItem.classList.remove("selected");
-  }
-};
-
-Search.prototype.removeMouseNavigation = function() {
-  let hoveredSearchItem = this.els.searchResults.querySelector(
-    ".search-item.hovered"
-  );
-  if (hoveredSearchItem) {
-    hoveredSearchItem.classList.remove("hovered");
   }
 };
 
