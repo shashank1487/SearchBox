@@ -91,7 +91,6 @@ Search.prototype.performSearch = function(filter) {
 
   function filterUserData(filter) {
     [[...this.data]]
-      .map(filterBy.call(self, CONSTANTS.FILTER_COLUMNS.NAME, filter))
       .map(filterBy.call(self, CONSTANTS.FILTER_COLUMNS.ID, filter))
       .map(filterBy.call(self, CONSTANTS.FILTER_COLUMNS.NAME, filter))
       .map(filterBy.call(self, CONSTANTS.FILTER_COLUMNS.ITEMS, filter))
@@ -293,8 +292,7 @@ Search.prototype.getNodesForHighlighting = function(node) {
       {
         acceptNode: function(node) {
           // Logic to determine whether to accept, reject or skip node
-          // In this case, only accept nodes that have content
-          // other than whitespace (spaces, tabs, newlines and Unicode spaces)
+          // Only nodes other than whitespace (spaces, tabs, newlines and Unicode spaces)
           if (!/^\s*$/.test(node.data)) {
             return NodeFilter.FILTER_ACCEPT;
           }
