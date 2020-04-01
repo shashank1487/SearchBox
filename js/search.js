@@ -21,34 +21,45 @@ Search.prototype.initialize = async function() {
   let self = this;
   let response = await fetch(CONSTANTS.API);
   this.data = await response.json();
+
   let performSearchBounded = this.performSearch.bind(this);
   let deBouncedPerformSearch = debounce(performSearchBounded);
 
+  this.els.searchText.addEventListener("keydown", function(e) {
+    if (e.keyCode === 38 || e.keyCode === 40) {
+      e.preventDefault();
+    }
+  });
+
   this.els.searchText.addEventListener("keyup", function(e) {
-    switch (e.keyCode) {
-      //case 37: //LEFT
-      case 38: //UP
-        self.addKeyboardNavigation(CONSTANTS.DIRECTION.UP);
-        break;
-      //case 39: //RIGHT
-      case 40: //BOTTOM
-        self.addKeyboardNavigation(CONSTANTS.DIRECTION.DOWN);
-        break;
-      default:
-        let {
-          target: { value: filter }
-        } = e;
-        deBouncedPerformSearch(filter);
-        break;
+    if (
+      (e.keyCode >= 48 && e.keyCode <= 90) ||
+      (e.keyCode >= 96 && e.keyCode <= 111) ||
+      (e.keyCode >= 186 && e.keyCode <= 192) ||
+      (e.keyCode >= 219 && e.keyCode <= 222) ||
+      e.keyCode === 8 ||
+      e.keyCode === 46
+    ) {
+      let {
+        target: { value: filter }
+      } = e;
+      deBouncedPerformSearch(filter);
+    } else if (e.keyCode === 38) {
+      self.els.searchResults.style.pointerEvents = "none";
+      self.addKeyboardNavigation(CONSTANTS.DIRECTION.UP);
+    } else if (e.keyCode === 40) {
+      self.els.searchResults.style.pointerEvents = "none";
+      self.addKeyboardNavigation(CONSTANTS.DIRECTION.DOWN);
     }
   });
 
   this.els.searchResults.addEventListener("mouseover", function(e) {
-    let removeKeyboardNavigationBounded = self.removeKeyboardNavigation.bind(
-      self
-    );
-    removeKeyboardNavigationBounded();
-    self.addMouseNavigation(e);
+    self.removeKeyboardNavigation();
+    setTimeout(() => self.addMouseNavigation(e), 50);
+  });
+
+  this.els.searchResults.addEventListener("mouseout", function(e) {
+    self.removeMouseNavigation(e);
   });
 };
 
@@ -62,6 +73,20 @@ Search.prototype.performSearch = function(filter) {
   } else {
     this.els.searchResults.innerHTML = filterUserData.call(this, filter);
     this.els.searchResults.classList.add("show");
+  }
+
+  let nodes = this.getNodesForHighlighting(document.querySelector(".search"));
+  let regex = new RegExp(this.els.searchText.value, "gi");
+  if (nodes && nodes.length > 0) {
+    nodes.forEach(node => {
+      let match = node.innerHTML.match(regex);
+      if (match) {
+        node.innerHTML = node.innerHTML.replace(
+          regex,
+          `<span class="highlight">${match[0]}</span>`
+        );
+      }
+    });
   }
 
   function filterUserData(filter) {
@@ -104,7 +129,10 @@ Search.prototype.performSearch = function(filter) {
       <div class="search-item">
       <span class="id">${item.id}</span>
       <span class="name">${item.name}</span>
-      <span class="items">${item.items}</span>
+      <ul class="items">
+      ${item.items &&
+        item.items.map(it => `<li class="item">${it}</li>`).join("")}
+      </ul>
       <span class="address">${item.address}</span>
       <span class="pincode">${item.pincode}</span>
       </div>
@@ -143,11 +171,13 @@ Search.prototype.addKeyboardNavigation = function(direction) {
         }
       }
       searchItemToBeSelected.classList.add("selected");
+      this.scrollInToView(searchItemToBeSelected);
     } else {
       hoveredSearchItem = this.els.searchResults.querySelector(
         ".search-item.hovered"
       );
       if (hoveredSearchItem) {
+        hoveredSearchItem.classList.remove("hovered");
         searchItemToBeSelected =
           direction === CONSTANTS.DIRECTION.DOWN
             ? hoveredSearchItem.nextElementSibling
@@ -165,7 +195,7 @@ Search.prototype.addKeyboardNavigation = function(direction) {
             : this.els.searchResults.lastElementChild;
       }
       searchItemToBeSelected.classList.add("selected");
-      hoveredSearchItem.classList.remove("hovered");
+      this.scrollInToView(searchItemToBeSelected);
     }
   }
 };
@@ -180,19 +210,103 @@ Search.prototype.removeKeyboardNavigation = function(e) {
 };
 
 Search.prototype.addMouseNavigation = function(e) {
-  let hoveredSearchItem = this.els.searchResults.querySelector(
+  let hoveredSearchItem, searchItemToBeSelected;
+  hoveredSearchItem = this.els.searchResults.querySelector(
     ".search-item.hovered"
   );
   if (hoveredSearchItem) {
     hoveredSearchItem.classList.remove("hovered");
   }
   let { target } = e;
-  if (target.classList.contains("search-item")) {
-    target && target.classList.add("hovered");
-  } else {
-    let searchItem = target.closest(".search-item");
-    searchItem && searchItem.classList.add("hovered");
+  if (target) {
+    if (target.classList.contains("search-item")) {
+      searchItemToBeSelected = target;
+    } else {
+      searchItemToBeSelected = target.closest(".search-item");
+    }
+    searchItemToBeSelected && searchItemToBeSelected.classList.add("hovered");
   }
+
+  // if (!this.scrollInProgress) {
+  //   this.scrollInProgress = true;
+  //   this.scrollInToView(searchItemToBeSelected);
+  // }
+};
+
+Search.prototype.removeMouseNavigation = function(e) {
+  let { target } = e,
+    hoveredSearchItem;
+  if (target) {
+    if (target.classList.contains("hovered")) {
+      hoveredSearchItem = target;
+    } else {
+      hoveredSearchItem = target.closest(".hovered");
+    }
+    hoveredSearchItem && hoveredSearchItem.classList.remove("hovered");
+  }
+};
+
+Search.prototype.scrollInToView = function(node) {
+  if (node) {
+    console.log("Hello" + Date.now());
+    let self = this;
+    let selectedSearchItemRect = node.getBoundingClientRect();
+    let searchItemsRect = this.els.searchResults.getBoundingClientRect();
+
+    if (this.els.searchResults.firstElementChild === node) {
+      this.els.searchResults.scrollTop = 0;
+    } else if (this.els.searchResults.lastElementChild === node) {
+      this.els.searchResults.scrollTop =
+        this.els.searchResults.scrollHeight -
+        this.els.searchResults.clientHeight;
+    } else {
+      if (selectedSearchItemRect.top >= searchItemsRect.bottom) {
+        this.els.searchResults.scrollTop += selectedSearchItemRect.height;
+      } else if (selectedSearchItemRect.bottom <= searchItemsRect.top) {
+        this.els.searchResults.scrollTop -= selectedSearchItemRect.height;
+      } else if (
+        selectedSearchItemRect.top <= searchItemsRect.bottom &&
+        selectedSearchItemRect.bottom >= searchItemsRect.bottom
+      ) {
+        this.els.searchResults.scrollTop += selectedSearchItemRect.height;
+      } else if (
+        selectedSearchItemRect.top <= searchItemsRect.top &&
+        selectedSearchItemRect.bottom <= searchItemsRect.bottom
+      ) {
+        this.els.searchResults.scrollTop -= selectedSearchItemRect.height;
+      }
+    }
+
+    setTimeout(function() {
+      self.els.searchResults.style.pointerEvents = "";
+      //self.scrollInProgress = false;
+    }, 100);
+  }
+};
+
+Search.prototype.getNodesForHighlighting = function(node) {
+  let textNode,
+    textNodeParent = [],
+    walk = document.createTreeWalker(
+      node,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: function(node) {
+          // Logic to determine whether to accept, reject or skip node
+          // In this case, only accept nodes that have content
+          // other than whitespace (spaces, tabs, newlines and Unicode spaces)
+          if (!/^\s*$/.test(node.data)) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        }
+      },
+      false
+    );
+
+  while ((textNode = walk.nextNode())) {
+    textNodeParent.push(textNode.parentElement);
+  }
+  return textNodeParent;
 };
 
 export default Search;
