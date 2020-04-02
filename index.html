@@ -24,7 +24,12 @@
           placeholder="Search users by ID, name, items, address and pincode"
         />
       </div>
-      <div class="search-results"></div>
+      <div class="search-results-container">
+        <div class="loading disabled">
+          <img src="assets/img/spinner.gif" />
+        </div>
+        <div class="search-results"></div>
+      </div>
     </div>
     <script type="module">
       import { init } from "./js/main.js";

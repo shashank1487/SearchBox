@@ -30,6 +30,30 @@ body {
   outline: none;
 }
 
+.search-results-container {
+  position: relative;
+}
+
+.loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 1;
+  height: 400px;
+  width: 394px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.loading.disabled {
+  visibility: hidden;
+}
+
+.loading img {
+  width: 60%;
+  height: 60%;
+}
+
 .search-results {
   width: 394px;
   min-height: 40px;

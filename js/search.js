@@ -1,26 +1,41 @@
 import { debounce } from "../utils/helper.js";
 import * as CONSTANTS from "../utils/constants.js";
+import * as storage from "../utils/storage.js";
 
 const Search = function(elements = {}) {
   this.els = {};
   this.setElements(this.els, elements);
   this.data = [];
   this.searchResults = [];
+  //this.position = null;
   this.initialize();
 };
 
 Search.prototype.setElements = function(els, elements) {
   let searchElementClass = elements.searchInput || ".search-input";
   let resultsElementClass = elements.results || ".search-results";
+  let loadingClass = elements.loading || ".loading";
 
   els.searchText = document.querySelector(searchElementClass);
   els.searchResults = document.querySelector(resultsElementClass);
+  els.loading = document.querySelector(loadingClass);
 };
 
 Search.prototype.initialize = async function() {
-  let self = this;
-  let response = await fetch(CONSTANTS.API);
-  this.data = await response.json();
+  let self = this,
+    searchData;
+
+  searchData = storage.getItem(CONSTANTS.SEARCH_DATA);
+  if (searchData) {
+    this.data = JSON.parse(searchData);
+  } else {
+    this.els.loading.classList.remove("disabled");
+    let response = await fetch(CONSTANTS.API);
+    searchData = await response.json();
+    this.els.loading.classList.add("disabled");
+    storage.setItem(CONSTANTS.SEARCH_DATA, JSON.stringify(searchData));
+    this.data = searchData;
+  }
 
   let performSearchBounded = this.performSearch.bind(this);
   let deBouncedPerformSearch = debounce(performSearchBounded);
@@ -54,8 +69,21 @@ Search.prototype.initialize = async function() {
   });
 
   this.els.searchResults.addEventListener("mouseover", function(e) {
+    //let { pageY } = e;
+    // let position = target.dataset.position;
+    // if (!position) {
+    //   let searchItem = target.closest(".search-item");
+    //   position = searchItem && searchItem.dataset.position;
+    // }
+    //if (pageY !== self.position) {
     self.removeKeyboardNavigation();
-    setTimeout(() => self.addMouseNavigation(e), 50);
+    self.addMouseNavigation(e);
+    //self.position = pageY;
+    //} else {
+    //let previousElementSibling = e.target.previousElementSibling;
+    //previousElementSibling && previousElementSibling.classList.add("hovered");
+    //}
+    //setTimeout(() => self.addMouseNavigation(e), 50);
   });
 
   this.els.searchResults.addEventListener("mouseout", function(e) {
@@ -125,7 +153,7 @@ Search.prototype.performSearch = function(filter) {
       ? data
           .map(function(item, index) {
             return `
-      <div class="search-item">
+      <div class="search-item" data-position="${index + 1}">
       <span class="id">${item.id}</span>
       <span class="name">${item.name}</span>
       <ul class="items">
@@ -228,8 +256,8 @@ Search.prototype.addMouseNavigation = function(e) {
 
   // if (!this.scrollInProgress) {
   //   this.scrollInProgress = true;
-  //   this.scrollInToView(searchItemToBeSelected);
-  // }
+  this.scrollInToView(searchItemToBeSelected);
+  //}
 };
 
 Search.prototype.removeMouseNavigation = function(e) {
@@ -247,7 +275,6 @@ Search.prototype.removeMouseNavigation = function(e) {
 
 Search.prototype.scrollInToView = function(node) {
   if (node) {
-    console.log("Hello" + Date.now());
     let self = this;
     let selectedSearchItemRect = node.getBoundingClientRect();
     let searchItemsRect = this.els.searchResults.getBoundingClientRect();

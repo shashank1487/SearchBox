@@ -12,3 +12,5 @@ export const DIRECTION = {
   UP: "up",
   DOWN: "down"
 };
+
+export const SEARCH_DATA = "searchData";
